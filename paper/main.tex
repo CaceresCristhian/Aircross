@@ -12,7 +12,7 @@
 
 \begin{document}
 
-\title{An Empirical Benchmark of Operational Load and Meteorology Conditioning for Hourly Power-Plant $\text{NO}_x$ Prediction from EPA CEMS and ERA5 Reanalysis}
+\title{Operational Load vs.\ Meteorological Conditioning: A Spatially Independent Benchmark for Hourly Power-Plant $\text{NO}_x$ Emission Estimation}
 
 \author{
 \IEEEauthorblockN{Cristhian David Caceres Mateus}
@@ -58,7 +58,7 @@ Despite increasing interest in data-driven emissions monitoring, existing litera
 \label{sec:rqs}
 To resolve these gaps transparently, this investigation is structured around three primary research questions:
 \begin{itemize}
-    \item \textbf{RQ1 (Operational vs.\ Atmospheric Attribution)}: What fraction of hourly afternoon $\text{NO}_x$ release rate variance is attributable to boiler electrical load versus local boundary-layer meteorological variables?
+    \item \textbf{RQ1 (Predictive Contribution of Operational Load)}: How much does gross electrical load improve hourly afternoon $\text{NO}_x$ emission estimation over local boundary-layer meteorological and calendar features alone?
     \item \textbf{RQ2 (Spatiotemporal Generalization)}: Can sequence cross-attention architectures extrapolate across multi-year temporal shifts (2024--2025) and across completely unseen facility clusters separated by 50~km buffer zones?
     \item \textbf{RQ3 (Inductive Bias and Statistical Equivalence)}: Under 2,000-replicate paired geographic cluster bootstrap resampling, does neural cross-attention provide a statistically distinguishable performance advantage over linear load regression and histogram gradient boosting?
 \end{itemize}
@@ -107,7 +107,7 @@ CNN Plume Detection~\cite{schuit2023automated} & TROPOMI $\text{CH}_4$ + wind fi
 \label{sec:data}
 
 \subsection{EPA CAMPD CEMS Hourly Stack Telemetry}
-We retrieve raw unit-level hourly CEMS files for Ohio (OH), Pennsylvania (PA), and Texas (TX) spanning \YearFirst--\YearLast~from the Public Utility Data Liberation (PUDL) Zenodo archives of EPA CAMPD Part~75 bulk data (Zenodo Record~8235497 for 2020--2022 state files; Record~23450614 for 2023--2025 quarterly national files). Under 40~CFR Part~75, all CEMS timestamps are recorded in \textbf{hour-beginning Local Standard Time (LST)} year-round without Daylight Saving Time shifts. To match the afternoon Sentinel-5P overpass window (~13:30 local solar time), we retain hours 13 and 14~LST in \texttt{config/config.yaml}.
+We retrieve raw unit-level hourly CEMS files for Ohio (OH), Pennsylvania (PA), and Texas (TX) spanning \YearFirst--\YearLast~from the Public Utility Data Liberation (PUDL) Zenodo archives of EPA CAMPD Part~75 bulk data (Zenodo Record~8235497 for 2020--2022 state files; Record~23450614 for 2023--2025 quarterly national files). Under 40~CFR Part~75, all CEMS timestamps are recorded in \textbf{hour-beginning Local Standard Time (LST)} year-round without Daylight Saving Time shifts. To cover the afternoon Sentinel-5P overpass window ($\approx 13$:30 Local Solar Time), we extract hours 13:00 and 14:00~LST in \texttt{config/config.yaml}. Because local solar noon varies with facility longitude relative to standard time zone reference meridians ($1^\circ \approx 4\text{ minutes}$; across our cohort, Ohio/Pennsylvania longitudes $\approx 80^\circ\text{W}$ vs.\ the $75^\circ\text{W}$ reference meridian introduce a $\approx 20\text{ min}$ solar offset, while Texas longitudes $\approx 96^\circ\text{W}$ vs.\ the $90^\circ\text{W}$ meridian introduce a $\approx 24\text{ min}$ offset), true solar 13:30 overpasses across all 19 facilities occur between $\approx 13$:06 and $\approx 13$:54 clock time, falling directly within this evaluated two-hour operational window $[13:00, 14:00]$~LST.
 
 Unit-level records are aggregated to \texttt{(Facility ID, Date, Hour)}:
 \begin{itemize}
@@ -159,10 +159,11 @@ Given a normalized window $\tilde{\mathbf{X}} \in \mathbb{R}^{T \times F}$, AirC
 \begin{equation}
     \mathbf{H} = \text{TransformerEncoder}(\tilde{\mathbf{X}}\mathbf{W}_{\text{in}} + \mathbf{P}) \in \mathbb{R}^{T \times D}.
 \end{equation}
-To condition temporal pooling on the target-hour atmospheric state, the 6 normalized meteorological variables at the target slot $\tilde{\mathbf{m}}_T \in \mathbb{R}^{1 \times 6}$ are projected into query vector $\mathbf{q} = \tilde{\mathbf{m}}_T \mathbf{W}_q \in \mathbb{R}^{1 \times D}$ that attends over $\mathbf{H}$ via multi-head cross-attention:
+To condition multi-hour dispatch history on the instantaneous dispersion environment, the 6 normalized meteorological variables at the target overpass slot $\tilde{\mathbf{m}}_T \in \mathbb{R}^{1 \times 6}$ are projected into query vector $\mathbf{q} = \tilde{\mathbf{m}}_T \mathbf{W}_q \in \mathbb{R}^{1 \times D}$ that attends over $\mathbf{H}$ via multi-head cross-attention:
 \begin{equation}
     \mathbf{c} = \text{MHA}(\text{query}=\mathbf{q},\,\text{key}=\mathbf{H},\,\text{value}=\mathbf{H}) \in \mathbb{R}^{1 \times D}.
 \end{equation}
+Physically, the temporal tokens $\mathbf{H}$ encode internal plant operating inertia (multi-hour fuel feed dynamics and boiler thermal ramp), whereas the query $\mathbf{q}$ isolates the external atmospheric state (wind dispersion vectors and boundary-layer mixing height) into which stack effluents are discharged at the target overpass hour.
 A residual connection with the final token $\mathbf{h}_T$ followed by LayerNorm and a two-layer MLP head yields the prediction:
 \begin{equation}
     \hat{z} = \text{MLP}(\text{LN}(\mathbf{c} + \mathbf{h}_T)).
@@ -189,7 +190,7 @@ We evaluate two generalization regimes:
     \item \textbf{Temporal Hold-Out (Future Years)}: Across all \NFacilities~facilities, 2020--2022 forms the fit set, 2023 is the validation set for early stopping, and 2024--2025 is the held-out test set.
     \item \textbf{Spatial Hold-Out (50~km Cluster-Independent 5-Fold Grouped CV)}: To prevent geographic data leakage between co-located power stations (e.g., Kyger Creek and Gavin are 2.5~km apart in Cheshire, OH; Sommers and Spruce are 0.4~km apart in San Antonio, TX; Limestone and Oak Grove are \MaxClusterDistKm{}~km apart), facilities within 50~km are grouped into \NClusters{} connected spatial clusters. These clusters are partitioned across \NFolds~disjoint folds (\texttt{spatial\_split\_seed: 42}; fold assignments in Table~\ref{tab:facilities}), ensuring that no facility in a test fold is within 50~km of any facility in the training folds. In each fold, training facilities use 2020--2022 for fitting and 2023 for validation early stopping.
 \end{enumerate}
-We report MAE ($\text{kg/h}$), root mean squared error (RMSE, $\text{kg/h}$), coefficient of determination ($R^2$), scale-free log-MAE, and mean prediction bias ($\text{mean}(\hat{y} - y)$). For spatial cross-validation, we report 95\% confidence intervals via 2,000-replicate cluster bootstrap resampling over facilities, as well as paired bootstrap difference tests ($\Delta\text{MAE}$) against linear load regression.
+We report MAE ($\text{kg/h}$), root mean squared error (RMSE, $\text{kg/h}$), coefficient of determination ($R^2$), scale-free log-MAE, and mean prediction bias ($\text{mean}(\hat{y} - y)$). For spatial cross-validation, to account for spatial error covariance between adjacent facilities, statistical inference is conducted via 2,000-replicate paired geographic cluster bootstrap resampling. The resampling unit is strictly the \NClusters{} disjoint geographic clusters (not individual facilities); in each bootstrap replicate, an identical set of resampled clusters is evaluated across models, computing paired difference distributions $\Delta\text{MAE} = \text{MAE}_{\text{model}} - \text{MAE}_{\text{LoadReg}}$. Under \NClusters{} geographic clusters, the two-sided minimum detectable effect size at $\alpha = 0.05$ with $80\%$ power is $\approx \pm \MinDetectableEffectKgH\text{ kg/h}$ ($\approx \MinDetectableEffectPct\%$ of baseline MAE).
 
 \subsection{Temporal Generalization Results (2024--2025)}
 Table~\ref{tab:temporal} reports performance on the 2024--2025 temporal hold-out, and Fig.~\ref{fig:pred_vs_obs} illustrates observed versus predicted $\text{NO}_x$ rates.
@@ -242,7 +243,7 @@ To investigate model sensitivity under contrasting operational and atmospheric c
 \subsection{Ablation Study: Operational Load vs.\ Meteorology}
 Table~\ref{tab:ablation} isolates the predictive contribution of plant gross load and cross-attention pooling.
 \begin{enumerate}
-    \item \textbf{Weather-Only Generalization}: Without gross load, AirCross achieves \TempAirCrossWMAE~$\pm$~\TempAirCrossWMAEsd~kg/h temporal MAE, a \textbf{\TempWeatherOnlyVsGlobalPct\%} reduction over the global mean (\TempGlobalMeanMAE~kg/h). However, under spatial cluster hold-out, AirCross with weather only achieves \SpatAirCrossWMAE~$\pm$~\SpatAirCrossWMAEsd~kg/h, which is only a \textbf{\SpatWeatherOnlyVsGlobalPct\%} reduction over the global mean (\SpatGlobalMeanMAE~kg/h). We hypothesize that this discrepancy arises because surface pressure and ambient temperature encode elevation and local topoclimatological fingerprints that act as implicit facility identifiers across time; on completely unseen power stations with unobserved boiler capacities, these site-specific proxies fail to generalize.
+    \item \textbf{Weather-Only Generalization}: Without gross load, AirCross achieves \TempAirCrossWMAE~$\pm$~\TempAirCrossWMAEsd~kg/h temporal MAE, a \textbf{\TempWeatherOnlyVsGlobalPct\%} reduction over the global mean (\TempGlobalMeanMAE~kg/h). However, under spatial cluster hold-out, AirCross with weather only achieves \SpatAirCrossWMAE~$\pm$~\SpatAirCrossWMAEsd~kg/h, which is only a \textbf{\SpatWeatherOnlyVsGlobalPct\%} reduction over the global mean (\SpatGlobalMeanMAE~kg/h). The substantial contrast between temporal and spatial generalization suggests that weather-only models exploit persistent geographic and microclimatic signatures (such as characteristic surface pressure and elevation gradients) associated with monitored facilities across time. Under strict spatial hold-out, these site-specific topoclimatic proxies fail to transfer to unobserved boiler configurations, demonstrating the limited spatial generalizability of meteorology alone in the absence of operational gross load.
     \item \textbf{Contribution of Gross Load}: Supplying gross load reduces AirCross MAE by \textbf{\TempLoadGainPct\%} temporally and \textbf{\SpatLoadGainPct\%} spatially, confirming that electrical generation is the primary physical determinant of stack mass emissions.
     \item \textbf{Cross-Attention Pooling}: On the temporal split, cross-attention provides a modest refinement over the attention-free ablation (\TempAirCrossMAE{} vs.\ \TempAirCrossNoXMAE{}~kg/h). On unseen spatial clusters, both variants perform within seed standard deviation (\SpatAirCrossMAE{} $\pm$ \SpatAirCrossMAEsd{} vs.\ \SpatAirCrossNoXMAE{} $\pm$ \SpatAirCrossNoXMAEsd{}~kg/h).
 \end{enumerate}

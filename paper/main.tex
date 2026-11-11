@@ -1,0 +1,273 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+\input{tables/macros.tex}
+
+\begin{document}
+
+\title{An Empirical Benchmark of Operational Load and Meteorology Conditioning for Hourly Power-Plant $\text{NO}_x$ Prediction from EPA CEMS and ERA5 Reanalysis}
+
+\author{
+\IEEEauthorblockN{Cristhian David Caceres Mateus}
+\IEEEauthorblockA{\textit{Department of  Business} \\
+\textit{Univ. of Europe for Applied Sciences}\\
+Potsdam 14469, Germany \\
+cristhian.caceres@ue-germany.de}
+\and
+\IEEEauthorblockN{Talha Ali Khan}
+\IEEEauthorblockA{\textit{Department of  Business} \\
+\textit{Univ. of Europe for Applied Sciences}\\
+Potsdam 14469, Germany \\
+talhaali.khan@ue-germany.de}
+}
+\maketitle
+
+\begin{abstract}
+Independent estimation and verification of hourly power-plant nitrogen oxide ($\text{NO}_x$) mass emissions during afternoon satellite-overpass windows require disentangling plant operational load from local boundary-layer meteorology. Prior to coupling spaceborne trace-gas retrievals with ground truth, a rigorous baseline is needed to quantify how much predictive signal is carried by plant telemetry versus meteorological reanalysis alone, and how models generalize to future years and unseen facilities. In this work, we present an empirical benchmark and sequence-attention evaluation on continuous hourly smokestack records from the US Environmental Protection Agency (EPA) Clean Air Markets Program Data (CAMPD) Continuous Emission Monitoring System (CEMS) synchronized with European Centre for Medium-Range Weather Forecasts (ECMWF) ERA5 hourly reanalysis across \NFacilities~baseload power stations in Ohio, Pennsylvania, and Texas (\YearFirst--\YearLast; \NFacilityHours~synchronized facility-hours and \NWindows~four-slot sequences at 13:00 and 14:00 Local Standard Time). Across \NSeeds~random seeds, we benchmark AirCross (a meteorology-queried cross-attention architecture) against trivial baselines (global and per-facility training means), physical emission-factor load regression, histogram gradient boosting, a multilayer perceptron (MLP), a 1D convolutional neural network (1D-CNN), and an attention-free ablation. On the multi-year temporal hold-out (2024--2025), histogram gradient boosting achieves the lowest error with a mean absolute error (MAE) of \TempGBMAE~kg/h ($R^2 = \TempGBR$), followed by AirCross with \TempAirCrossMAE~$\pm$~\TempAirCrossMAEsd~kg/h ($R^2 = \TempAirCrossR$), which reduces MAE by \TempAirCrossVsGlobalPct\% relative to the global mean (\TempGlobalMeanMAE~kg/h) and by \TempAirCrossVsLoadRegPct\% relative to linear load regression (\TempLoadRegMAE~kg/h). Under 50~km cluster-independent 5-fold grouped spatial cross-validation across unseen facilities, MLP achieves \SpatMLPMAE~$\pm$~\SpatMLPMAEsd~kg/h, gradient boosting reaches \SpatGBMAE~kg/h, and linear load regression achieves \SpatLoadRegMAE~kg/h, with AirCross at \SpatAirCrossMAE~$\pm$~\SpatAirCrossMAEsd~kg/h. Paired cluster bootstrap difference tests against linear load regression reveal that 95\% confidence intervals for all learned models span zero (e.g., AirCross vs.\ Load Regression: [\SpatAirCrossdCIlo, \SpatAirCrossdCIhi]~kg/h; Gradient Boosting vs.\ Load Regression: [\SpatGBdCIlo, \SpatGBdCIhi]~kg/h), showing that model differences across unobserved boiler technologies fall within statistical sampling variance. Ablation experiments demonstrate that gross electrical load accounts for a \TempLoadGainPct\% temporal (\SpatLoadGainPct\% spatial) MAE reduction over weather-only inputs (\TempAirCrossWMAE~kg/h temporal; \SpatAirCrossWMAE~kg/h spatial). Weather-only models reduce error by \TempWeatherOnlyVsGlobalPct\% temporally, hypothesized to exploit elevation and local climate fingerprints as geographic proxies, but achieve only a \SpatWeatherOnlyVsGlobalPct\% reduction over the global mean on unseen plants, establishing an empirical foundation for Phase~B satellite plume attribution.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Continuous Emission Monitoring System (CEMS), ERA5 Reanalysis, Nitrogen Oxides ($\text{NO}_x$), Power Plant Emissions, Benchmark, Cross-Attention, Spatiotemporal Generalization.
+\end{IEEEkeywords}
+
+\section{Introduction}
+\label{sec:intro}
+Continuous Emission Monitoring Systems (CEMS) mandated under US Environmental Protection Agency (EPA) 40~CFR Part~75 provide continuous hourly smokestack measurements of nitrogen oxides ($\text{NO}_x$), sulfur dioxide ($\text{SO}_2$), carbon dioxide ($\text{CO}_2$), and gross electrical load across fossil-fuel power stations. When aligning in-situ stack records with afternoon polar-orbiting satellite overpasses---such as Copernicus Sentinel-5P TROPOMI at approximately 13:30 local solar time~\cite{veefkind2012sentinel}---two fundamental questions arise:
+\begin{enumerate}
+    \item How accurately can afternoon stack $\text{NO}_x$ mass release rates ($\text{kg/h}$) be predicted from local meteorological reanalysis and plant operational load across future reporting years and completely unseen facilities?
+    \item How much predictive power derives from operational load versus atmospheric variables (wind velocity, surface pressure, ambient temperature, and planetary boundary-layer height), which govern both combustion regimes and downwind plume dilution?
+\end{enumerate}
+
+\subsection{Gap Analysis}
+\label{sec:gap_analysis}
+Despite increasing interest in data-driven emissions monitoring, existing literature exhibits three critical methodological gaps:
+\begin{enumerate}
+    \item \textbf{Unaddressed Spatial Autocorrelation Leakage}: Many spatial evaluations evaluate machine learning models using random train-test splits across facilities~\cite{roberts2017,meyer2018}. Because co-located power stations share identical topoclimatology and dispatch regimes (e.g., Kyger Creek and Gavin are 2.5~km apart in Cheshire, OH), random partitioning yields severe spatial leakage, overestimating generalizability to unmonitored facilities.
+    \item \textbf{Omission of Physical Load and Linear Baselines}: Prior machine learning studies often benchmark complex neural networks against unconditioned global means or trivial persistence, failing to evaluate whether deep models genuinely improve over physical emission-factor load regression or tuned tree ensembles on tabular telemetry~\cite{grinsztajn2022why,shwartzziv2022tabular}.
+    \item \textbf{Conflation of Meteorological Conditioning with Site Identity}: Without strict ablation between operational gross load and weather-only inputs, models evaluated over time can exploit elevation, surface pressure, and seasonal temperatures as static geographic proxies for plant identity, concealing poor spatial generalization.
+\end{enumerate}
+
+\subsection{Research Questions}
+\label{sec:rqs}
+To resolve these gaps transparently, this investigation is structured around three primary research questions:
+\begin{itemize}
+    \item \textbf{RQ1 (Operational vs.\ Atmospheric Attribution)}: What fraction of hourly afternoon $\text{NO}_x$ release rate variance is attributable to boiler electrical load versus local boundary-layer meteorological variables?
+    \item \textbf{RQ2 (Spatiotemporal Generalization)}: Can sequence cross-attention architectures extrapolate across multi-year temporal shifts (2024--2025) and across completely unseen facility clusters separated by 50~km buffer zones?
+    \item \textbf{RQ3 (Inductive Bias and Statistical Equivalence)}: Under 2,000-replicate paired geographic cluster bootstrap resampling, does neural cross-attention provide a statistically distinguishable performance advantage over linear load regression and histogram gradient boosting?
+\end{itemize}
+
+To answer these questions, we structure our research in two phases. \textbf{Phase~A} (reported in this paper) constructs an empirical, leak-free multi-year benchmark from real EPA CAMPD hourly CEMS data (\YearFirst--\YearLast), official US Energy Information Administration (EIA) Form~860 plant coordinates, and ECMWF ERA5 hourly meteorological reanalysis~\cite{hersbach2020era5}. \textbf{Phase~B} (outlined in Section~\ref{sec:limitations}) extends the framework to 2D Sentinel-5P TROPOMI tropospheric $\text{NO}_2$ column patches.
+
+Our contributions in Phase~A are:
+\begin{enumerate}
+    \item \textbf{Rule-Based Multi-Year CEMS + ERA5 Benchmark (\YearFirst--\YearLast)}: We ingest six years of raw unit-level CEMS archives across Ohio, Pennsylvania, and Texas, preserving missing $\text{NO}_x$ indicators rather than imputing zeros, aligning ERA5 wind vectors ($\text{m/s}$) to Part~75 Local Standard Time (LST), and selecting all \NFacilities~baseload power stations satisfying an objective completeness rule.
+    \item \textbf{Meteorology-Conditioned Cross-Attention (AirCross)}: We formulate a sequence model over consecutive afternoon overpass windows in which target-hour meteorological variables query self-attended temporal tokens, isolating what cross-attention adds via an explicit attention-free ablation.
+    \item \textbf{Cluster-Independent Spatial Evaluation \& Paired Bootstrap Tests}: We partition facilities into 50~km geographical clusters to eliminate spatial leakage between co-located power stations, and evaluate all models across \NSeeds~random seeds using paired cluster bootstrap difference tests against linear load regression and global baselines.
+    \item \textbf{Atmospheric Wind and Regional Subgroup Analysis}: We evaluate model robustness across advective ($w \ge 2.0\text{ m/s}$) vs.\ stagnant wind regimes, and analyze transfer dynamics between the Texas ERCOT fleet and Ohio/Pennsylvania PJM power stations.
+\end{enumerate}
+
+\section{Related Work}
+\label{sec:related}
+
+\subsection{Point-Source $\text{NO}_x$ and $\text{CH}_4$ Quantification}
+Top-down point-source emission estimation from satellite column retrievals has relied on physical mass-balance and dispersion formulations. Beirle et al.~\cite{beirle2011megacity, beirle2019pinpointing, beirle2021catalog} introduced the horizontal flux divergence operator $\nabla \cdot (\mathbf{u}\Omega)$ to pinpoint and catalog $\text{NO}_x$ point sources from multi-year TROPOMI averages. Goldberg et al.~\cite{goldberg2019high, goldberg2022using} and de Foy et al.~\cite{defoy2015estimating} rotated daily satellite scenes along ERA5 wind directions around known power-plant coordinates and fitted exponentially modified Gaussian (EMG) curves, validating top-down estimates post-hoc against US EPA CEMS stack totals. Lorente et al.~\cite{lorente2019quantifying} combined TROPOMI $\text{NO}_2$ retrievals with atmospheric transport modeling over urban corridors. For fine-scale methane plumes, Varon et al.~\cite{varon2018quantifying, varon2020high} analyzed cross-sectional flux (CSF) and integrated mass enhancement (IME) methods using large-eddy simulations, while Lauvaux et al.~\cite{lauvaux2022global} combined TROPOMI methane plume thresholding with Lagrangian atmospheric inversion to quantify global oil and gas ultra-emitters.
+
+\subsection{Machine Learning for Emissions Monitoring}
+Recent studies have applied deep learning to emission detection and estimation. Schuit et al.~\cite{schuit2023automated} trained a convolutional neural network (CNN) on TROPOMI methane scenes to automatically flag super-emitter plumes prior to physical quantification. Sequence and attention architectures~\cite{vaswani2017attention, dosovitskiy2020image} offer a natural mechanism to condition temporal or spatial representations on exogenous meteorological fields. However, as emphasized in recent machine learning benchmark evaluations~\cite{grinsztajn2022why, shwartzziv2022tabular}, deep learning models for emissions monitoring must be evaluated against strong tabular baselines (such as gradient-boosted decision trees and linear emission-factor models) under strict, cluster-independent facility-held-out splits so that plant identity and load effects are not conflated with meteorological skill. Table~\ref{tab:literature_comparison} summarizes how Phase~A relates to prior point-source studies.
+
+\begin{table*}[htbp]
+\caption{Comparison of Point-Source Emission Frameworks and the Present Phase~A Benchmark}
+\label{tab:literature_comparison}
+\centering
+\footnotesize
+\resizebox{\textwidth}{!}{
+\begin{tabular}{p{3.5cm}p{3.2cm}p{3.2cm}p{2.8cm}p{3.2cm}}
+\toprule
+\textbf{Study / Framework} & \textbf{Primary Inputs} & \textbf{Meteorological Conditioning} & \textbf{CEMS Stack Role} & \textbf{Unseen-Facility Hold-Out} \\
+\midrule
+Flux Divergence~\cite{beirle2019pinpointing, beirle2021catalog} & Multi-year TROPOMI $\text{NO}_2$ + ERA5 & Spatial divergence $\nabla \cdot (\mathbf{u}\Omega)$ & Post-hoc comparison & Not applicable (analytic) \\
+Wind-Rotation EMG~\cite{defoy2015estimating, goldberg2022using} & TROPOMI $\text{NO}_2$ + ERA5 wind & Wind-aligned scene rotation & Post-hoc validation & Not applicable (per-site fit) \\
+CSF / IME~\cite{varon2018quantifying, lauvaux2022global} & Plume VCD + wind speed & Transect flux / Lagrangian model & None (LES / inventory) & Not applicable \\
+CNN Plume Detection~\cite{schuit2023automated} & TROPOMI $\text{CH}_4$ + wind fields & Input channels to classifier & None (plume labels) & Spatial split on scenes \\
+\midrule
+\textbf{AirCross Phase~A (This Work)} & \textbf{Hourly CEMS load + ERA5} & \textbf{Meteorology-queried cross-attention} & \textbf{Direct supervised target} & \textbf{50~km cluster-grouped CV} \\
+\bottomrule
+\end{tabular}
+}
+\end{table*}
+
+\section{Dataset and Preprocessing}
+\label{sec:data}
+
+\subsection{EPA CAMPD CEMS Hourly Stack Telemetry}
+We retrieve raw unit-level hourly CEMS files for Ohio (OH), Pennsylvania (PA), and Texas (TX) spanning \YearFirst--\YearLast~from the Public Utility Data Liberation (PUDL) Zenodo archives of EPA CAMPD Part~75 bulk data (Zenodo Record~8235497 for 2020--2022 state files; Record~23450614 for 2023--2025 quarterly national files). Under 40~CFR Part~75, all CEMS timestamps are recorded in \textbf{hour-beginning Local Standard Time (LST)} year-round without Daylight Saving Time shifts. To match the afternoon Sentinel-5P overpass window (~13:30 local solar time), we retain hours 13 and 14~LST in \texttt{config/config.yaml}.
+
+Unit-level records are aggregated to \texttt{(Facility ID, Date, Hour)}:
+\begin{itemize}
+    \item A unit-hour is marked operating if gross load $> 0\text{ MW}$, and a facility-hour is marked \texttt{operating} if summed gross load exceeds $1.0\text{ MW}$.
+    \item Missing $\text{NO}_x$ mass is \textbf{never} replaced with zero. If any operating unit has a missing \texttt{NOx Mass (lbs)} value during an hour, that facility-hour is flagged \texttt{nox\_complete = False} and excluded. In practice, because 40~CFR Part~75 strictly requires continuous monitoring or conservative regulatory substitution, operating baseload boilers exhibited zero unrecorded hours (\NMissingNOxHours~incomplete hours).
+    \item Reported $\text{NO}_x$ mass in pounds per hour is converted to kilograms per hour via $1\text{ lb} = 0.45359237\text{ kg}$.
+\end{itemize}
+
+\subsection{Objective Facility Selection and EIA-860 Coordinates}
+Rather than hand-picking plants, \texttt{src/data/process\_cems.py} selects all facilities in OH, PA, and TX that satisfy three objective criteria across \YearFirst--\YearLast: (i) mean operating afternoon $\text{NO}_x \ge \SelMinNOx\text{ kg/h}$, (ii) at least \SelMinHours~operating afternoon hours in each of the six years, and (iii) verified coordinates in the US EIA Form~860 (Schedule~2, Plant file). This selects \textbf{\NFacilities~baseload power stations} (\NFacOh~in OH, \NFacPa~in PA, and \NFacTx~in TX), listed in Table~\ref{tab:facilities} and mapped in Fig.~\ref{fig:map}.
+
+\input{tables/table_facilities.tex}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig_facilities_map.png}
+\caption{Geographic distribution of the \NFacilities~EPA CEMS facilities in Ohio, Pennsylvania, and Texas selected by the objective baseload completeness rule, colored by mean afternoon $\text{NO}_x$ emission rate ($\text{kg/h}$). Coordinates from EIA Form~860.}
+\label{fig:map}
+\end{figure}
+
+\subsection{ERA5 Meteorology and Timezone Alignment}
+For each facility's EIA-860 coordinates, \texttt{src/data/fetch\_era5.py} queries the Open-Meteo ERA5 reanalysis archive (\texttt{models=era5}) with explicit unit and clock parameters (\texttt{wind\_speed\_unit=ms}, \texttt{timezone=GMT}). We retrieve 10.0\,m wind speed ($\text{m/s}$), 10.0\,m wind direction (degrees meteorological, blowing \textit{from}), surface pressure ($\text{hPa}$), 2\,m temperature ($^\circ\text{C}$), and planetary boundary-layer height ($\text{m}$). ERA5 UTC timestamps are shifted by each state's standard-time offset ($\text{OH}: -5\text{ h}$, $\text{PA}: -5\text{ h}$, $\text{TX}: -6\text{ h}$) prior to an exact one-to-one join on \texttt{(Facility ID, Date, Hour)}. Across all \NFacilityHours~synchronized facility-hours (\NOperatingHours~operating with complete $\text{NO}_x$ and \NNonOperatingHours~non-operating), the verified mean 10.0\,m wind speed is \MeanWindSpeed~$\text{m/s}$, and the mean (median) operating $\text{NO}_x$ rate is \MeanNOx~kg/h (\MedianNOx~kg/h). Eastward and northward wind components are computed via $u = -w \sin\theta$ and $v = -w \cos\theta$.
+
+\subsection{Consecutive Sequence Windows}
+The module \texttt{src/data/dataset.py} maps calendar days and overpass hours ($13$ and $14\text{ LST}$) to contiguous integer slot indices. A sample is a window of $T = 4$ \textbf{strictly consecutive} slots at a single facility (i.e., 13:00 and 14:00~LST on two consecutive calendar days) whose final slot is an operating hour with complete $\text{NO}_x$. Any window spanning a calendar gap or missing meteorological record is discarded, yielding \NWindows~valid windows across the \NFacilities~facilities.
+
+\section{Methodology}
+\label{sec:method}
+
+\subsection{Input Feature Sets}
+Each window is a tensor $\mathbf{X} \in \mathbb{R}^{T \times F}$ with $T = 4$. We evaluate two feature sets:
+\begin{enumerate}
+    \item \textbf{Weather + Load ($F = 10$)}: $\mathbf{m}_t = [u_t, v_t, w_t, P_t, T_{2\text{m},t}, \text{PBLH}_t]$ (6 meteorological variables), seasonal/hour encodings $[\sin(2\pi\,\text{month}/12), \cos(2\pi\,\text{month}/12), \mathbb{I}(\text{Hour}=14)]$, and facility gross load $L_t$ ($\text{MW}$).
+    \item \textbf{Weather Only ($F = 9$)}: Identical to above but omitting gross load $L_t$, isolating how much variance can be explained by meteorology and calendar context alone.
+\end{enumerate}
+All features are standardized using the per-feature mean and standard deviation computed \textbf{exclusively on the training fit split} of each fold: $\tilde{\mathbf{X}} = (\mathbf{X} - \boldsymbol{\mu}_{\text{fit}}) / (\boldsymbol{\sigma}_{\text{fit}} + 10^{-6})$. The target is log-transformed emission $z = \ln(1 + y_T)$, where $y_T$ is the facility $\text{NO}_x$ release rate ($\text{kg/h}$) at slot $T$. Predictions are mapped back to physical units via $\hat{y}_T = \max(\exp(\hat{z}) - 1, 0)$.
+
+\subsection{Meteorological Coupling and Combustion Telemetry}
+\label{sec:physics_coupling}
+In baseload utility boilers, ambient meteorological variables are hypothesized to interact with operational telemetry through three physical and thermodynamic pathways (which serve as domain motivation rather than isolated causal effects verified by ablation):
+\begin{enumerate}
+    \item \textbf{Combustion Air Density and Humidity}: Ambient temperature and surface pressure govern combustion air mass density and oxygen stoichiometry, which we hypothesize may influence flame zone peak temperatures driving thermal $\text{NO}_x$ generation via the extended Zeldovich mechanism~\cite{beirle2019pinpointing}.
+    \item \textbf{Post-Combustion SCR Catalyst Temperature}: Selective catalytic reduction (SCR) systems require flue-gas temperatures within an operational window ($315^\circ\text{C}$ to $400^\circ\text{C}$) for catalytic $\text{NO}_x$ reduction; we hypothesize that ambient winter temperatures and cold boiler startups alter ductwork heat-loss rates, although stack-level telemetry cannot directly verify internal catalyst temperatures.
+    \item \textbf{Weather-Driven Dispatch Demand}: Local temperature extremes (summer cooling and winter heating) drive grid dispatch setpoints, determining boiler ramping rates and unit operating states. Downwind atmospheric plume dispersion and buoyant plume rise~\cite{defoy2015estimating,goldberg2022using} govern satellite column concentrations downwind (Phase~B), whereas Phase~A focuses on stack-level emissions.
+\end{enumerate}
+
+\subsection{AirCross Architecture}
+Given a normalized window $\tilde{\mathbf{X}} \in \mathbb{R}^{T \times F}$, AirCross (\texttt{src/models/aircross.py}) projects each time slot to dimension $D = 64$ with learned positional embeddings $\mathbf{P} \in \mathbb{R}^{1 \times T \times D}$ and applies $L = 2$ pre-norm Transformer encoder layers ($H = 4$ heads, GELU activation, dropout $0.1$):
+\begin{equation}
+    \mathbf{H} = \text{TransformerEncoder}(\tilde{\mathbf{X}}\mathbf{W}_{\text{in}} + \mathbf{P}) \in \mathbb{R}^{T \times D}.
+\end{equation}
+To condition temporal pooling on the target-hour atmospheric state, the 6 normalized meteorological variables at the target slot $\tilde{\mathbf{m}}_T \in \mathbb{R}^{1 \times 6}$ are projected into query vector $\mathbf{q} = \tilde{\mathbf{m}}_T \mathbf{W}_q \in \mathbb{R}^{1 \times D}$ that attends over $\mathbf{H}$ via multi-head cross-attention:
+\begin{equation}
+    \mathbf{c} = \text{MHA}(\text{query}=\mathbf{q},\,\text{key}=\mathbf{H},\,\text{value}=\mathbf{H}) \in \mathbb{R}^{1 \times D}.
+\end{equation}
+A residual connection with the final token $\mathbf{h}_T$ followed by LayerNorm and a two-layer MLP head yields the prediction:
+\begin{equation}
+    \hat{z} = \text{MLP}(\text{LN}(\mathbf{c} + \mathbf{h}_T)).
+\end{equation}
+In the \textbf{AirCross (no cross-attention)} ablation, $\mathbf{c}$ is omitted and $\text{LN}(\mathbf{h}_T)$ is passed directly to the MLP head.
+
+\subsection{Baselines and Training Protocol}
+All models receive the exact same windows and splits (\texttt{src/models/baselines.py}):
+\begin{itemize}
+    \item \textbf{Global mean}: Predicts the mean training $y$ ($\text{kg/h}$).
+    \item \textbf{Per-facility mean}: Predicts each facility's training mean $y$ (defined only on the temporal split).
+    \item \textbf{Load regression}: Ordinary least squares $y_T = \alpha + \beta L_T$ fitted in $\text{kg/h}$ on target gross load.
+    \item \textbf{Histogram Gradient Boosting}: \texttt{HistGradientBoostingRegressor} with fixed defaults (400 trees, learning rate $0.05$, max leaf nodes $31$, seed~0) fitted on flattened windows $\mathbb{R}^{T \cdot F}$ with target $\ln(1+y_T)$.
+    \item \textbf{MLP and 1D-CNN}: Neural baselines with identical loss, optimizer, early stopping, and learning-rate schedule as AirCross.
+\end{itemize}
+Neural models minimize Smooth-$L_1$ loss on $\ln(1+y_T)$ using AdamW ($\text{lr} = 10^{-3}$, weight decay $10^{-4}$, batch size $256$, gradient clip $1.0$), \texttt{ReduceLROnPlateau} (factor $0.5$, patience $2$), and early stopping on validation loss (patience $6$, maximum $60$ epochs), restoring the best validation checkpoint. Neural models are trained across \textbf{\NSeeds~random seeds} ($\{0, 1, 2, 3, 4\}$).
+
+\section{Experimental Setup and Results}
+\label{sec:results}
+
+\subsection{Evaluation Splits and Cluster Isolation}
+We evaluate two generalization regimes:
+\begin{enumerate}
+    \item \textbf{Temporal Hold-Out (Future Years)}: Across all \NFacilities~facilities, 2020--2022 forms the fit set, 2023 is the validation set for early stopping, and 2024--2025 is the held-out test set.
+    \item \textbf{Spatial Hold-Out (50~km Cluster-Independent 5-Fold Grouped CV)}: To prevent geographic data leakage between co-located power stations (e.g., Kyger Creek and Gavin are 2.5~km apart in Cheshire, OH; Sommers and Spruce are 0.4~km apart in San Antonio, TX; Limestone and Oak Grove are \MaxClusterDistKm{}~km apart), facilities within 50~km are grouped into \NClusters{} connected spatial clusters. These clusters are partitioned across \NFolds~disjoint folds (\texttt{spatial\_split\_seed: 42}; fold assignments in Table~\ref{tab:facilities}), ensuring that no facility in a test fold is within 50~km of any facility in the training folds. In each fold, training facilities use 2020--2022 for fitting and 2023 for validation early stopping.
+\end{enumerate}
+We report MAE ($\text{kg/h}$), root mean squared error (RMSE, $\text{kg/h}$), coefficient of determination ($R^2$), scale-free log-MAE, and mean prediction bias ($\text{mean}(\hat{y} - y)$). For spatial cross-validation, we report 95\% confidence intervals via 2,000-replicate cluster bootstrap resampling over facilities, as well as paired bootstrap difference tests ($\Delta\text{MAE}$) against linear load regression.
+
+\subsection{Temporal Generalization Results (2024--2025)}
+Table~\ref{tab:temporal} reports performance on the 2024--2025 temporal hold-out, and Fig.~\ref{fig:pred_vs_obs} illustrates observed versus predicted $\text{NO}_x$ rates.
+\begin{itemize}
+    \item \textbf{Baseline Comparison}: The global training mean exhibits an MAE of \TempGlobalMeanMAE~kg/h ($R^2 = \TempGlobalMeanR$), and linear load regression reduces MAE to \TempLoadRegMAE~kg/h ($R^2 = \TempLoadRegR$). Per-facility training means reach \TempFacMeanMAE~kg/h ($R^2 = \TempFacMeanR$), reflecting persistent baseline differences across facilities.
+    \item \textbf{Model Performance}: Histogram gradient boosting achieves the lowest temporal error at \textbf{\TempGBMAE~kg/h} ($R^2 = \TempGBR$). AirCross achieves \textbf{\TempAirCrossMAE~$\pm$~\TempAirCrossMAEsd~kg/h} ($\text{RMSE} = \TempAirCrossRMSE$~kg/h, $R^2 = \TempAirCrossR$, $\text{logMAE} = \TempAirCrosslogMAE$), reducing MAE by \TempAirCrossVsGlobalPct\% relative to the global mean and by \TempAirCrossVsLoadRegPct\% relative to linear load regression. 1D-CNN and MLP achieve \TempCNNMAE~$\pm$~\TempCNNMAEsd~kg/h and \TempMLPMAE~$\pm$~\TempMLPMAEsd~kg/h, respectively.
+\end{itemize}
+
+\input{tables/table_temporal.tex}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig_pred_vs_obs.png}
+\caption{Observed versus predicted afternoon $\text{NO}_x$ emission rates ($\text{kg/h}$) on the 2024--2025 temporal test split for Gradient Boosting and AirCross (seed~0).}
+\label{fig:pred_vs_obs}
+\end{figure}
+
+\subsection{Spatial Generalization Results (Unseen Facility Clusters)}
+Table~\ref{tab:spatial} and Fig.~\ref{fig:spatial_pf} present the cluster-independent spatial cross-validation results across unseen facility clusters.
+\begin{itemize}
+    \item \textbf{Comparison on Unseen Plants}: Across completely unseen facilities, MLP achieves an MAE of \textbf{\SpatMLPMAE~$\pm$~\SpatMLPMAEsd~kg/h}, followed closely by gradient boosting (\textbf{\SpatGBMAE~kg/h}) and linear load regression (\textbf{\SpatLoadRegMAE~kg/h}), with 1D-CNN at \SpatCNNMAE~$\pm$~\SpatCNNMAEsd~kg/h and AirCross at \SpatAirCrossMAE~$\pm$~\SpatAirCrossMAEsd~kg/h.
+    \item \textbf{Absence of Detectable Difference Under Geographic Cluster Bootstrap}: Paired geographic cluster bootstrap difference tests against linear load regression reveal that the 95\% confidence intervals for all learned models span zero: MLP vs.\ LoadReg has $\Delta\text{MAE} \in [\SpatMLPdCIlo, \SpatMLPdCIhi]$~kg/h, Gradient Boosting vs.\ LoadReg has $\Delta\text{MAE} \in [\SpatGBdCIlo, \SpatGBdCIhi]$~kg/h, and AirCross vs.\ LoadReg has $\Delta\text{MAE} \in [\SpatAirCrossdCIlo, \SpatAirCrossdCIhi]$~kg/h. While intervals spanning zero do not prove formal mathematical equivalence (which would require pre-specified equivalence testing margins), they establish that no statistically detectable performance advantage exists among load-aware models given the \NClusters{} geographic clusters (minimum detectable effect size $\approx \pm \MinDetectableEffectKgH\text{ kg/h}$ or $\approx \MinDetectableEffectPct\%$ of MAE). Crucially, load-conditioned models significantly outperform the unconditioned global mean (\SpatGlobalMeanMAE~kg/h, $\Delta\text{MAE} \in [\SpatGlobalMeandCIlo, \SpatGlobalMeandCIhi]$~kg/h).
+    \item \textbf{Prediction Bias Analysis}: Neural models trained on $\ln(1+y)$ with Smooth-$L_1$ loss exhibit mild negative bias (\SpatCNNBias~to~\SpatMLPBias~kg/h) because $\text{expm1}$ of $L_1$-minimized predictions estimates the conditional geometric median, under-predicting extreme positive emission spikes. In contrast, linear load regression fits the arithmetic mean directly, yielding a positive bias of +\SpatLoadRegBias~kg/h.
+\end{itemize}
+
+\input{tables/table_spatial.tex}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig_spatial_per_facility.png}
+\caption{Per-facility out-of-sample MAE ($\text{kg/h}$) under cluster-independent spatial cross-validation for the Global Mean, Load Regression, Gradient Boosting, and AirCross.}
+\label{fig:spatial_pf}
+\end{figure}
+
+\subsection{Atmospheric Wind and Regional Subgroup Analysis}
+\label{sec:subgroups}
+To investigate model sensitivity under contrasting operational and atmospheric conditions, we evaluate the temporal holdout across two descriptive subgroupings (with evaluation based on the 5-seed averaged predictions):
+\begin{enumerate}
+    \item \textbf{Wind-Speed Regimes (Advective vs.\ Stagnant)}: In calm conditions ($w < 2.0\text{ m/s}$, $N = \NCalmTestWindows$~test sequences), absolute prediction errors are higher across all architectures (Per-Facility Mean: \RegimeFacMeanCalmMAE~kg/h; Load Regression: \RegimeLoadRegCalmMAE~kg/h; AirCross: \RegimeAirCrossCalmMAE~kg/h; Gradient Boosting: \RegimeGBCalmMAE~kg/h). Under advective conditions ($w \ge 2.0\text{ m/s}$, $N = \NAdvTestWindows$~test sequences), errors are lower across the board (Per-Facility Mean: \RegimeFacMeanAdvMAE~kg/h; Load Regression: \RegimeLoadRegAdvMAE~kg/h; AirCross: \RegimeAirCrossAdvMAE~kg/h; Gradient Boosting: \RegimeGBAdvMAE~kg/h). Gradient boosting maintains the lowest MAE across both wind regimes, while linear load regression improves by \RegimeLoadRegAdvGainMAE~kg/h and AirCross improves by \RegimeAirCrossAdvGainMAE~kg/h, showing that lower errors under advective winds reflect overall sample conditions rather than an architecture-specific transport advantage (Fig.~\ref{fig:regime_breakdown}(a)).
+    \item \textbf{Regional Fleets (Texas ERCOT vs.\ PJM / Ohio-PA Fleet)}: As depicted in Fig.~\ref{fig:regime_breakdown}(b), performance differs noticeably across the two geographic fleets. In the Texas fleet ($N = \NTxTestWindows$ across \NTxPlants{} plants), where baseload units operate with lower baseline emission intensity, the per-facility mean baseline incurs \RegimeFacMeanTxMAE~kg/h, load regression achieves \RegimeLoadRegTxMAE~kg/h, AirCross achieves \RegimeAirCrossTxMAE~kg/h, and gradient boosting achieves \RegimeGBTxMAE~kg/h (paired bootstrap difference AirCross vs.\ Gradient Boosting: [\RegimeTXDiffAirCrossGBlo, \RegimeTXDiffAirCrossGBhi]~kg/h). In the PJM / Ohio-PA fleet ($N = \NMidwestTestWindows$ across \NMidwestPlants{} baseload plants), where mean emission rates are higher and unit-level capacities vary substantially, the per-facility mean incurs \RegimeFacMeanMidwestMAE~kg/h and pooled linear load regression incurs \RegimeLoadRegMidwestMAE~kg/h MAE. Here, gradient boosting (\RegimeGBMidwestMAE~kg/h) and AirCross (\RegimeAirCrossMidwestMAE~kg/h) are closely matched and statistically tied (difference 95\% CI: [\RegimeMWDiffAirCrossGBlo, \RegimeMWDiffAirCrossGBhi]~kg/h), reducing MAE by \RegimeGBMidwestGainMAE~kg/h (\RegimeGBMidwestVsLoadRegPct\%) and \RegimeAirCrossMidwestGainMAE~kg/h (\RegimeAirCrossMidwestVsLoadRegPct\%) respectively relative to pooled linear regression. This separation is primarily attributable to facility-level technological heterogeneity across the regional plants that a single pooled linear slope cannot accommodate, rather than confirmed atmospheric mechanisms.
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig_regime_breakdown.png}
+\caption{Temporal hold-out evaluation stratified across (a) atmospheric wind transport regimes (calm vs.\ advective) and (b) regional fleets (Texas ERCOT vs.\ Ohio/Pennsylvania PJM). AirCross values represent the 5-seed ensemble mean; Gradient Boosting is a single deterministic model.}
+\label{fig:regime_breakdown}
+\end{figure}
+
+\subsection{Ablation Study: Operational Load vs.\ Meteorology}
+Table~\ref{tab:ablation} isolates the predictive contribution of plant gross load and cross-attention pooling.
+\begin{enumerate}
+    \item \textbf{Weather-Only Generalization}: Without gross load, AirCross achieves \TempAirCrossWMAE~$\pm$~\TempAirCrossWMAEsd~kg/h temporal MAE, a \textbf{\TempWeatherOnlyVsGlobalPct\%} reduction over the global mean (\TempGlobalMeanMAE~kg/h). However, under spatial cluster hold-out, AirCross with weather only achieves \SpatAirCrossWMAE~$\pm$~\SpatAirCrossWMAEsd~kg/h, which is only a \textbf{\SpatWeatherOnlyVsGlobalPct\%} reduction over the global mean (\SpatGlobalMeanMAE~kg/h). We hypothesize that this discrepancy arises because surface pressure and ambient temperature encode elevation and local topoclimatological fingerprints that act as implicit facility identifiers across time; on completely unseen power stations with unobserved boiler capacities, these site-specific proxies fail to generalize.
+    \item \textbf{Contribution of Gross Load}: Supplying gross load reduces AirCross MAE by \textbf{\TempLoadGainPct\%} temporally and \textbf{\SpatLoadGainPct\%} spatially, confirming that electrical generation is the primary physical determinant of stack mass emissions.
+    \item \textbf{Cross-Attention Pooling}: On the temporal split, cross-attention provides a modest refinement over the attention-free ablation (\TempAirCrossMAE{} vs.\ \TempAirCrossNoXMAE{}~kg/h). On unseen spatial clusters, both variants perform within seed standard deviation (\SpatAirCrossMAE{} $\pm$ \SpatAirCrossMAEsd{} vs.\ \SpatAirCrossNoXMAE{} $\pm$ \SpatAirCrossNoXMAEsd{}~kg/h).
+\end{enumerate}
+
+\input{tables/table_ablation.tex}
+
+\section{Limitations and Phase~B Roadmap}
+\label{sec:limitations}
+We emphasize four limitations of Phase~A:
+\begin{enumerate}
+    \item \textbf{Absence of Satellite Column Retrievals}: Phase~A models operate strictly on in-situ CEMS telemetry and ERA5 reanalysis; they do not ingest Sentinel-5P TROPOMI scenes and cannot perform plume source localization or satellite-only attribution. Prototype spatial Vision Transformer and cross-sectional flux modules are isolated in \texttt{src/models/phase\_b/} for Phase~B.
+    \item \textbf{Unobserved Technological Covariates}: While EIA-860 provides coordinates and gross load, differences in fuel grade (coal vs.\ gas) and post-combustion controls (selective catalytic reduction vs.\ low-$\text{NO}_x$ burners) are not explicitly conditioned as input features, contributing to the wide facility bootstrap confidence intervals (Table~\ref{tab:spatial}).
+    \item \textbf{Continuous Sampling Without Cloud Masking}: Observations are sampled daily at 13:00--14:00~LST regardless of cloud cover, whereas satellite overpasses require clear-sky conditions (TROPOMI cloud fraction $< 0.3$, QA $> 0.75$).
+    \item \textbf{Reanalysis Spatial Scale}: ERA5 variables represent a $0.25^\circ$ surface grid ($\approx 25\text{ km}$) and 10.0\,m anemometer level rather than effective stack plume injection height.
+\end{enumerate}
+
+\section{Data Availability}
+\label{sec:data_availability}
+All data supporting the findings of this study are publicly available from authoritative public repositories. Continuous Emission Monitoring System (CEMS) hourly stack telemetry is accessible via the US Environmental Protection Agency (EPA) Clean Air Markets Program Data (CAMPD) portal (\url{https://campd.epa.gov/}). Power plant technical attributes, prime mover classifications, and plant geographic coordinates are published under US Energy Information Administration (EIA) Form EIA-860 Schedule~2 (\url{https://www.eia.gov/electricity/data/eia860/}). Hourly surface and atmospheric boundary-layer meteorology are derived from the European Centre for Medium-Range Weather Forecasts (ECMWF) ERA5 reanalysis and accessed via the Open-Meteo Historical Weather API (\url{https://open-meteo.com/}). All synchronization scripts, split configurations, and evaluation pipelines are maintained in the project repository (\url{https://github.com/CaceresCristhian/Aircross}).
+
+\section{Conclusion}
+\label{sec:conclusion}
+We presented an empirical benchmark of operational load and meteorological conditioning for hourly power-plant $\text{NO}_x$ emissions across \NFacilities~baseload power stations (\YearFirst--\YearLast, \NFacilityHours~synchronized facility-hours, Run~\RunID). Our findings show that: (i) gross electrical load is the primary driver of stack $\text{NO}_x$, reducing MAE by \TempLoadGainPct\%--\SpatLoadGainPct\% over weather-only models; (ii) on temporal hold-out, histogram gradient boosting achieves the lowest MAE (\TempGBMAE~kg/h), with AirCross achieving \TempAirCrossMAE~$\pm$~\TempAirCrossMAEsd~kg/h; (iii) under 50~km cluster-independent spatial cross-validation, linear load regression (\SpatLoadRegMAE~kg/h), MLP (\SpatMLPMAE~kg/h), and gradient boosting (\SpatGBMAE~kg/h) perform within paired bootstrap confidence bounds of one another; (iv) wind-speed subgrouping shows that all models, including simple load regression, achieve lower error under advective winds ($w \ge 2.0\text{ m/s}$); (v) regional subgroup analysis reveals that learned models yield their largest gains over pooled linear regression in the PJM / Ohio-PA fleet (\RegimeAirCrossMidwestVsLoadRegPct\% reduction), reflecting unmodelled boiler heterogeneity across facilities rather than confirmed microclimatic mechanisms; and (vi) weather-only models achieve substantial temporal gains (\TempWeatherOnlyVsGlobalPct\%), hypothesized to exploit geographic climate fingerprints, but fail to extrapolate to unseen plants (\SpatWeatherOnlyVsGlobalPct\% gain). This benchmark establishes an empirical foundation for Phase~B integration with real Sentinel-5P TROPOMI column retrievals.
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}

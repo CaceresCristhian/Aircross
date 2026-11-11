@@ -1,0 +1,94 @@
+[
+  {
+    "split": "temporal",
+    "fold": 0,
+    "test_facilities": [
+      298,
+      2828,
+      2832,
+      2876,
+      3118,
+      3140,
+      3459,
+      3470,
+      3611,
+      6139,
+      6146,
+      6178,
+      6179,
+      6180,
+      6183,
+      6193,
+      6194,
+      7097,
+      8102
+    ],
+    "n_fit": 36687,
+    "n_val": 11745,
+    "n_test": 18298
+  },
+  {
+    "split": "spatial",
+    "fold": 0,
+    "test_facilities": [
+      3459,
+      6146,
+      6178,
+      6194
+    ],
+    "n_fit": 29044,
+    "n_val": 9265,
+    "n_test": 13972
+  },
+  {
+    "split": "spatial",
+    "fold": 1,
+    "test_facilities": [
+      298,
+      2876,
+      6139,
+      6180,
+      8102
+    ],
+    "n_fit": 26565,
+    "n_val": 8306,
+    "n_test": 18722
+  },
+  {
+    "split": "spatial",
+    "fold": 2,
+    "test_facilities": [
+      3140,
+      3470,
+      6179
+    ],
+    "n_fit": 31001,
+    "n_val": 9737,
+    "n_test": 10750
+  },
+  {
+    "split": "spatial",
+    "fold": 3,
+    "test_facilities": [
+      2832,
+      3118,
+      6193
+    ],
+    "n_fit": 30677,
+    "n_val": 10261,
+    "n_test": 10068
+  },
+  {
+    "split": "spatial",
+    "fold": 4,
+    "test_facilities": [
+      2828,
+      3611,
+      6183,
+      7097
+    ],
+    "n_fit": 29461,
+    "n_val": 9411,
+    "n_test": 13218
+  }
+]

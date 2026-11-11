@@ -1,0 +1,59 @@
+# AirCross configuration: the single source of truth for every script in src/.
+# Each key here is read by code. If no code reads a setting, remove it.
+
+data:
+  states: ["OH", "PA", "TX"]
+  years: [2020, 2021, 2022, 2023, 2024, 2025]
+  # EPA CAMPD / Part 75 hours are hour-beginning, local standard time (no DST).
+  # 13-14 LST brackets the Sentinel-5P overpass (~13:30 local solar time).
+  overpass_hours_lst: [13, 14]
+  # UTC offsets of local standard time for each state (all TX plants used are in Central time).
+  utc_offset_lst_h: {"OH": -5, "PA": -5, "TX": -6}
+  # A unit-hour counts as "operating" when gross load is above this value.
+  operating_min_load_mw: 1.0
+  sources:
+    cems_state_record: 8235497     # Zenodo, PUDL raw EPA CEMS, state-year zips (1995-2022)
+    cems_national_record: 23450614 # Zenodo, PUDL raw EPA CEMS, national-year zips (1995-2026)
+    eia860_url: "https://www.eia.gov/electricity/data/eia860/xls/eia8602023.zip"
+  # Facility selection rule (applied in process_cems.py, not hand-picked):
+  selection:
+    min_mean_nox_kgh: 200.0           # mean facility NOx over operating overpass hours
+    min_operating_hours_per_year: 300 # operating overpass hours required in a year...
+    min_years_present: 6              # ...in at least this many of the configured years
+  meteo:
+    provider: "open-meteo-era5-archive"
+    variables: ["wind_speed_10m", "wind_direction_10m", "surface_pressure", "temperature_2m", "boundary_layer_height"]
+    wind_speed_unit: "ms"
+    timezone: "GMT"
+
+model:
+  embed_dim: 64
+  num_heads: 4
+  num_layers: 2
+  dropout: 0.1
+  seq_len: 4   # 4 consecutive overpass hours = 13 and 14 LST on two consecutive days
+
+train:
+  seeds: [0, 1, 2, 3, 4]
+  max_epochs: 60
+  patience: 6
+  lr: 1.0e-3
+  weight_decay: 1.0e-4
+  batch_size: 256
+
+split:
+  # Temporal: train years -> validation year -> test years (all facilities)
+  temporal_train_years: [2020, 2021, 2022]
+  temporal_val_years: [2023]
+  temporal_test_years: [2024, 2025]
+  # Spatial: grouped K-fold over facilities (every facility is tested exactly once).
+  spatial_folds: 5
+  spatial_split_seed: 42
+  # Within each spatial fold: train facilities 2020-2022 for fitting, 2023 for early stopping;
+  # test facilities are evaluated on all years.
+  spatial_fit_years: [2020, 2021, 2022]
+  spatial_val_years: [2023]
+
+evaluation:
+  bootstrap_samples: 2000
+  bootstrap_seed: 0

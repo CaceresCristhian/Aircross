@@ -1,0 +1,151 @@
+split,fold,model,feature_set,seed,best_val_loss,best_epoch,last_epoch
+temporal,0,AirCross,weather+load,0,0.09625698409470257,7,13
+temporal,0,AirCross,weather+load,1,0.09578187573445812,8,14
+temporal,0,AirCross,weather+load,2,0.0956973406331191,22,28
+temporal,0,AirCross,weather+load,3,0.09685452220641892,14,20
+temporal,0,AirCross,weather+load,4,0.09507750850654552,9,15
+temporal,0,AirCross (no cross-attention),weather+load,0,0.10098235647365762,9,15
+temporal,0,AirCross (no cross-attention),weather+load,1,0.10064868750014981,18,24
+temporal,0,AirCross (no cross-attention),weather+load,2,0.10660637503433552,3,9
+temporal,0,AirCross (no cross-attention),weather+load,3,0.1018725473749328,10,16
+temporal,0,AirCross (no cross-attention),weather+load,4,0.1031148667853657,13,19
+temporal,0,MLP,weather+load,0,0.10216709602736777,19,25
+temporal,0,MLP,weather+load,1,0.096089271189254,27,33
+temporal,0,MLP,weather+load,2,0.099093693071043,15,21
+temporal,0,MLP,weather+load,3,0.1064972283397141,7,13
+temporal,0,MLP,weather+load,4,0.1030681663393822,30,36
+temporal,0,1D-CNN,weather+load,0,0.09526401014531506,23,29
+temporal,0,1D-CNN,weather+load,1,0.09824139148808886,27,33
+temporal,0,1D-CNN,weather+load,2,0.09565611808743564,26,32
+temporal,0,1D-CNN,weather+load,3,0.09691031539488366,15,21
+temporal,0,1D-CNN,weather+load,4,0.09758167717306093,22,28
+temporal,0,AirCross,weather,0,0.2206656747825504,9,15
+temporal,0,AirCross,weather,1,0.22390401164690654,7,13
+temporal,0,AirCross,weather,2,0.21316064601758533,17,23
+temporal,0,AirCross,weather,3,0.22428865571791387,12,18
+temporal,0,AirCross,weather,4,0.21549435583719959,14,20
+spatial,0,AirCross,weather+load,0,0.09821629646142238,10,16
+spatial,0,AirCross,weather+load,1,0.10331711166945909,9,15
+spatial,0,AirCross,weather+load,2,0.10400484363918876,10,16
+spatial,0,AirCross,weather+load,3,0.10588413314181151,6,12
+spatial,0,AirCross,weather+load,4,0.10413658756519484,17,23
+spatial,0,AirCross (no cross-attention),weather+load,0,0.10756792407050625,13,19
+spatial,0,AirCross (no cross-attention),weather+load,1,0.12060482670053944,6,12
+spatial,0,AirCross (no cross-attention),weather+load,2,0.11092704891659927,7,13
+spatial,0,AirCross (no cross-attention),weather+load,3,0.10652496415379879,9,15
+spatial,0,AirCross (no cross-attention),weather+load,4,0.11129936158126326,12,18
+spatial,0,MLP,weather+load,0,0.11450684944150645,9,15
+spatial,0,MLP,weather+load,1,0.116008719308146,11,17
+spatial,0,MLP,weather+load,2,0.11376412840016263,8,14
+spatial,0,MLP,weather+load,3,0.11489130791720994,12,18
+spatial,0,MLP,weather+load,4,0.11417681317167287,20,26
+spatial,0,1D-CNN,weather+load,0,0.11244641004288061,19,25
+spatial,0,1D-CNN,weather+load,1,0.10902184953463766,15,21
+spatial,0,1D-CNN,weather+load,2,0.10442476367554791,41,47
+spatial,0,1D-CNN,weather+load,3,0.12136128564107374,9,15
+spatial,0,1D-CNN,weather+load,4,0.12058809473427064,14,20
+spatial,0,AirCross,weather,0,0.21330857925716118,15,21
+spatial,0,AirCross,weather,1,0.22090663839789,16,22
+spatial,0,AirCross,weather,2,0.2177666447047472,7,13
+spatial,0,AirCross,weather,3,0.21908666363324722,11,17
+spatial,0,AirCross,weather,4,0.21711369766876368,14,20
+spatial,1,AirCross,weather+load,0,0.1062389233013018,14,20
+spatial,1,AirCross,weather+load,1,0.11136602316309165,11,17
+spatial,1,AirCross,weather+load,2,0.10676566213046446,14,20
+spatial,1,AirCross,weather+load,3,0.10543661944383373,16,22
+spatial,1,AirCross,weather+load,4,0.10899031953785238,14,20
+spatial,1,AirCross (no cross-attention),weather+load,0,0.118003679970905,4,10
+spatial,1,AirCross (no cross-attention),weather+load,1,0.11651822889451087,10,16
+spatial,1,AirCross (no cross-attention),weather+load,2,0.1228639820082458,4,10
+spatial,1,AirCross (no cross-attention),weather+load,3,0.11052189403891477,15,21
+spatial,1,AirCross (no cross-attention),weather+load,4,0.12548870868692047,3,9
+spatial,1,MLP,weather+load,0,0.11557468830778488,14,20
+spatial,1,MLP,weather+load,1,0.11909418701120895,9,15
+spatial,1,MLP,weather+load,2,0.11395625860152002,22,28
+spatial,1,MLP,weather+load,3,0.11514928851562783,20,26
+spatial,1,MLP,weather+load,4,0.11821956347334164,15,21
+spatial,1,1D-CNN,weather+load,0,0.10744105901254276,27,33
+spatial,1,1D-CNN,weather+load,1,0.11058153509519601,23,29
+spatial,1,1D-CNN,weather+load,2,0.12004361947329682,11,17
+spatial,1,1D-CNN,weather+load,3,0.10894671911335611,27,33
+spatial,1,1D-CNN,weather+load,4,0.10247723917171177,30,36
+spatial,1,AirCross,weather,0,0.2502307623890317,8,14
+spatial,1,AirCross,weather,1,0.2722896485049668,2,8
+spatial,1,AirCross,weather,2,0.24918455148127863,12,18
+spatial,1,AirCross,weather,3,0.24777703133945203,6,12
+spatial,1,AirCross,weather,4,0.25731531811742187,7,13
+spatial,2,AirCross,weather+load,0,0.08544194136154264,11,17
+spatial,2,AirCross,weather+load,1,0.09100004181279604,11,17
+spatial,2,AirCross,weather+load,2,0.09070268783118061,5,11
+spatial,2,AirCross,weather+load,3,0.08927439075604937,12,18
+spatial,2,AirCross,weather+load,4,0.09445757506637342,12,18
+spatial,2,AirCross (no cross-attention),weather+load,0,0.08886706450535334,15,21
+spatial,2,AirCross (no cross-attention),weather+load,1,0.09300777287322588,14,20
+spatial,2,AirCross (no cross-attention),weather+load,2,0.0958317350873568,8,14
+spatial,2,AirCross (no cross-attention),weather+load,3,0.09199987547551507,7,13
+spatial,2,AirCross (no cross-attention),weather+load,4,0.09285852633959167,16,22
+spatial,2,MLP,weather+load,0,0.0978598738313211,14,20
+spatial,2,MLP,weather+load,1,0.0963094522496495,27,33
+spatial,2,MLP,weather+load,2,0.09674227004320797,9,15
+spatial,2,MLP,weather+load,3,0.09892042793231762,8,14
+spatial,2,MLP,weather+load,4,0.09578366375999724,9,15
+spatial,2,1D-CNN,weather+load,0,0.09021316338711186,20,26
+spatial,2,1D-CNN,weather+load,1,0.09296914432693265,24,30
+spatial,2,1D-CNN,weather+load,2,0.09077364047538748,23,29
+spatial,2,1D-CNN,weather+load,3,0.09193921158191812,19,25
+spatial,2,1D-CNN,weather+load,4,0.09104270562705556,21,27
+spatial,2,AirCross,weather,0,0.20560646332900628,11,17
+spatial,2,AirCross,weather,1,0.20576612170354486,13,19
+spatial,2,AirCross,weather,2,0.20946117837693248,9,15
+spatial,2,AirCross,weather,3,0.21027250617476256,6,12
+spatial,2,AirCross,weather,4,0.20712748755263488,9,15
+spatial,3,AirCross,weather+load,0,0.08006055707408025,16,22
+spatial,3,AirCross,weather+load,1,0.07829744730755758,13,19
+spatial,3,AirCross,weather+load,2,0.08330550125445461,13,19
+spatial,3,AirCross,weather+load,3,0.08104360017345705,12,18
+spatial,3,AirCross,weather+load,4,0.0814914044020713,17,23
+spatial,3,AirCross (no cross-attention),weather+load,0,0.08331567752188193,15,21
+spatial,3,AirCross (no cross-attention),weather+load,1,0.08389161860730236,17,23
+spatial,3,AirCross (no cross-attention),weather+load,2,0.08148343056939915,18,24
+spatial,3,AirCross (no cross-attention),weather+load,3,0.08115574427006386,14,20
+spatial,3,AirCross (no cross-attention),weather+load,4,0.08299323873740169,8,14
+spatial,3,MLP,weather+load,0,0.08139272717144182,38,44
+spatial,3,MLP,weather+load,1,0.08097961231965951,28,34
+spatial,3,MLP,weather+load,2,0.08424152414412564,17,23
+spatial,3,MLP,weather+load,3,0.08204019926041844,30,36
+spatial,3,MLP,weather+load,4,0.08211758560054937,36,42
+spatial,3,1D-CNN,weather+load,0,0.08267275923706033,38,44
+spatial,3,1D-CNN,weather+load,1,0.08332222215370202,28,34
+spatial,3,1D-CNN,weather+load,2,0.08382592492634042,24,30
+spatial,3,1D-CNN,weather+load,3,0.08392771460306876,33,39
+spatial,3,1D-CNN,weather+load,4,0.08272571031658775,34,40
+spatial,3,AirCross,weather,0,0.2065724170939312,17,23
+spatial,3,AirCross,weather,1,0.20070196420822722,22,28
+spatial,3,AirCross,weather,2,0.19908478317460798,12,18
+spatial,3,AirCross,weather,3,0.20253907681824276,7,13
+spatial,3,AirCross,weather,4,0.2014692544373675,12,18
+spatial,4,AirCross,weather+load,0,0.09225449107619797,9,15
+spatial,4,AirCross,weather+load,1,0.09147497601256895,13,19
+spatial,4,AirCross,weather+load,2,0.08978653257595354,10,16
+spatial,4,AirCross,weather+load,3,0.09206121081796884,8,14
+spatial,4,AirCross,weather+load,4,0.08797036614631215,14,20
+spatial,4,AirCross (no cross-attention),weather+load,0,0.1023070725575034,10,16
+spatial,4,AirCross (no cross-attention),weather+load,1,0.09781325805859845,8,14
+spatial,4,AirCross (no cross-attention),weather+load,2,0.10446731431896407,7,13
+spatial,4,AirCross (no cross-attention),weather+load,3,0.09554479710560602,12,18
+spatial,4,AirCross (no cross-attention),weather+load,4,0.09304358225128576,11,17
+spatial,4,MLP,weather+load,0,0.09721120702160771,19,25
+spatial,4,MLP,weather+load,1,0.09998440892398895,18,24
+spatial,4,MLP,weather+load,2,0.09868225800856155,17,23
+spatial,4,MLP,weather+load,3,0.10128463680664242,23,29
+spatial,4,MLP,weather+load,4,0.09578433724844852,22,28
+spatial,4,1D-CNN,weather+load,0,0.0965402225962089,26,32
+spatial,4,1D-CNN,weather+load,1,0.0942811976543092,31,37
+spatial,4,1D-CNN,weather+load,2,0.09676337394843179,22,28
+spatial,4,1D-CNN,weather+load,3,0.09337880327266837,27,33
+spatial,4,1D-CNN,weather+load,4,0.1011796142823219,14,20
+spatial,4,AirCross,weather,0,0.21157919225917207,4,10
+spatial,4,AirCross,weather,1,0.20854604616009104,7,13
+spatial,4,AirCross,weather,2,0.2077905906699008,6,12
+spatial,4,AirCross,weather,3,0.20566139341623063,17,23
+spatial,4,AirCross,weather,4,0.21275218525445622,10,16

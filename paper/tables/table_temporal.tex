@@ -1,0 +1,23 @@
+\begin{table}[htbp]
+\caption{Temporal hold-out: train 2020--2022, early stopping on 2023, test 2024--2025 (all facilities). Errors in kg/h NO$_x$; mean $\pm$ s.d. over seeds where applicable. Bias = mean($\hat{y} - y$).}
+\label{tab:temporal}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{2.5pt}
+\resizebox{\columnwidth}{!}{
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Model} & \textbf{MAE} & \textbf{RMSE} & \textbf{$R^2$} & \textbf{logMAE} & \textbf{Bias} \\
+\midrule
+Global mean & 301.6 & 384.9 & -0.029 & 0.687 & 64.7 \\
+Per-facility mean & 259.2 & 348.9 & 0.154 & 0.586 & 62.9 \\
+Load regression & 209.1 & 282.8 & 0.445 & 0.481 & 26.9 \\
+Gradient boosting & \textbf{160.1} & 238.8 & 0.604 & 0.361 & -16.2 \\
+MLP & 180.1 $\pm$ 3.6 & 261.3 $\pm$ 4.4 & 0.526 $\pm$ 0.016 & 0.401 $\pm$ 0.007 & -23.3 $\pm$ 9.4 \\
+1D-CNN & 175.0 $\pm$ 3.1 & 257.4 $\pm$ 5.7 & 0.540 $\pm$ 0.020 & 0.390 $\pm$ 0.005 & -33.9 $\pm$ 9.5 \\
+AirCross (no cross-attention) & 179.0 $\pm$ 5.3 & 256.8 $\pm$ 8.3 & 0.541 $\pm$ 0.030 & 0.394 $\pm$ 0.010 & 0.0 $\pm$ 16.4 \\
+AirCross & 170.7 $\pm$ 3.0 & 255.6 $\pm$ 6.0 & 0.546 $\pm$ 0.021 & 0.378 $\pm$ 0.005 & -32.9 $\pm$ 17.0 \\
+\bottomrule
+\end{tabular}
+}
+\end{table}

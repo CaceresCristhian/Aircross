@@ -1,0 +1,19 @@
+\begin{table}[htbp]
+\caption{Ablations: input features and cross-attention pooling (MAE, kg/h, mean $\pm$ s.d. over seeds).}
+\label{tab:ablation}
+\centering
+\footnotesize
+\resizebox{\columnwidth}{!}{
+\begin{tabular}{llcc}
+\toprule
+\textbf{Model} & \textbf{Inputs} & \textbf{Temporal} & \textbf{Spatial} \\
+\midrule
+Gradient boosting & weather & 250.6 & 301.6 \\
+Gradient boosting & weather + load & 160.1 & 207.0 \\
+AirCross & weather & 249.0 $\pm$ 3.0 & 299.7 $\pm$ 3.6 \\
+AirCross (no cross-attention) & weather + load & 179.0 $\pm$ 5.3 & 214.6 $\pm$ 3.0 \\
+AirCross & weather + load & 170.7 $\pm$ 3.0 & 217.5 $\pm$ 5.8 \\
+\bottomrule
+\end{tabular}
+}
+\end{table}

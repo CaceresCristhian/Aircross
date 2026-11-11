@@ -1,0 +1,22 @@
+\begin{table*}[htbp]
+\caption{Spatial hold-out: grouped 5-fold cross-validation over 50~km spatial clusters (every cluster is unseen in exactly one fold; all years). 95\% CI by geographic cluster bootstrap. $\Delta$MAE: paired bootstrap difference vs.\ Load Regression. MAE$_{24\text{--}25}$: unseen facilities in 2024--2025 only.}
+\label{tab:spatial}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{2.5pt}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{lccccccc}
+\toprule
+\textbf{Model} & \textbf{MAE} & \textbf{RMSE} & \textbf{$R^2$} & \textbf{Bias} & \textbf{MAE 95\% CI} & \textbf{$\Delta$MAE vs LoadReg} & \textbf{MAE$_{24\text{--}25}$} \\
+\midrule
+Global mean & 304.6 & 390.3 & -0.048 & 33.6 & [258.4, 360.4] & [+33.5, +138.8] & 308.1 \\
+Load regression & 216.4 & 293.3 & 0.408 & 22.7 & [166.2, 272.2] & 0.0 (ref) & 218.2 \\
+Gradient boosting & 207.0 & 294.9 & 0.402 & -17.5 & [161.2, 258.6] & [-26.2, +8.9] & 204.5 \\
+MLP & \textbf{205.6 $\pm$ 2.5} & 307.5 $\pm$ 7.0 & 0.349 $\pm$ 0.029 & -38.2 $\pm$ 5.0 & [155.4, 264.5] & [-32.0, +14.1] & 199.6 $\pm$ 2.8 \\
+1D-CNN & 210.2 $\pm$ 3.0 & 304.1 $\pm$ 3.3 & 0.364 $\pm$ 0.014 & -33.0 $\pm$ 8.1 & [163.0, 265.4] & [-23.3, +11.9] & 201.6 $\pm$ 3.7 \\
+AirCross (no cross-attention) & 214.6 $\pm$ 3.0 & 308.0 $\pm$ 4.4 & 0.347 $\pm$ 0.019 & -14.1 $\pm$ 9.2 & [166.6, 271.0] & [-17.3, +14.2] & 209.1 $\pm$ 4.1 \\
+AirCross & 217.5 $\pm$ 5.8 & 314.8 $\pm$ 5.5 & 0.318 $\pm$ 0.024 & -36.6 $\pm$ 14.1 & [167.8, 275.2] & [-17.8, +22.5] & 212.2 $\pm$ 6.0 \\
+\bottomrule
+\end{tabular}
+}
+\end{table*}
